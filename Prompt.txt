@@ -1,0 +1,63 @@
+Role: Senior Full Stack Engineer & Google Cloud Expert
+
+Goal: Build a web application called "NovelDrive" that scrapes online novels from URLs and saves them directly to the user's personal Google Drive.
+
+Tech Stack:
+
+Framework: Next.js 14+ (App Router)
+
+Styling: Tailwind CSS + Shadcn UI (using a soft pastel color palette)
+
+Authentication: NextAuth.js with Google Provider (Requesting https://www.googleapis.com/auth/drive.file scope)
+
+Backend: Node.js environment via Next.js API Routes
+
+Scraping: cheerio for HTML parsing
+
+Storage: Google Drive API (for file storage and metadata)
+
+Core Feature Requirements:
+
+Google Login: Users must log in via Google. Ensure the session stores the access_token to make API calls to Google Drive.
+
+URL Scraper: > - Create an input field for a URL.
+
+When triggered, scrape the website for the title and main text content.
+
+Clean the HTML to extract only the story text (removing ads/nav).
+
+Google Drive Integration:
+
+Check for a folder named "NovelDrive_Library". If it doesn't exist, create it.
+
+Save the scraped novel as a .txt or .md file inside that folder.
+
+Rating & Category: Use Google Drive's appProperties or description field to store the user's 1-5 star rating and assigned category so no external database is needed.
+
+Dashboard Library: > - List all files from the "NovelDrive_Library" folder.
+
+Display them in a clean grid using soft pastel cards.
+
+Allow users to filter by "Category" and sort by "Rating."
+
+Reader Mode: A minimalist reading interface that pulls the text content directly from the Google Drive file.
+
+Development Instructions:
+
+First, outline the project structure.
+
+Second, provide the [...nextauth].ts configuration with the specific Google Drive scopes.
+
+Third, create the API route for the scraper and the Google Drive upload logic.
+
+Fourth, build the frontend dashboard using Shadcn UI components.
+
+Constraints:
+
+Use TypeScript for all files.
+
+Ensure the UI is mobile-responsive.
+
+Handle errors gracefully (e.g., invalid URLs or expired Google tokens).
+
+http://localhost:3000
