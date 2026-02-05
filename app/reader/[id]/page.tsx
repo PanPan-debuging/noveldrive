@@ -163,15 +163,20 @@ export default function ReaderPage() {
   const fetchNovelContent = async () => {
     setIsLoading(true)
     try {
-      const response = await fetch(`/api/novels/${params.id}`)
-      if (!response.ok) {
+      // 并行执行两个请求以提高加载速度
+      const [contentResponse, novelsResponse] = await Promise.all([
+        fetch(`/api/novels/${params.id}`),
+        fetch("/api/novels")
+      ])
+
+      // 处理内容响应
+      if (!contentResponse.ok) {
         throw new Error("Failed to fetch novel content")
       }
-      const data = await response.json()
-      setContent(data.content || "")
+      const contentData = await contentResponse.json()
+      setContent(contentData.content || "")
 
-      // Fetch metadata
-      const novelsResponse = await fetch("/api/novels")
+      // 处理元数据响应
       if (novelsResponse.ok) {
         const novelsData = await novelsResponse.json()
         const novel = novelsData.novels?.find(
