@@ -61,3 +61,6 @@ Ensure the UI is mobile-responsive.
 Handle errors gracefully (e.g., invalid URLs or expired Google tokens).
 
 http://localhost:3000
+
+$env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+npm run dev
