@@ -13,6 +13,7 @@ import { NovelMetadataEditor } from "@/components/novel-metadata-editor"
 import { useLanguage } from "@/contexts/language-context"
 import { getTranslation } from "@/lib/i18n"
 import { LanguageSwitcher } from "@/components/language-switcher"
+import { ThemeSwitcher } from "@/components/theme-switcher"
 
 export default function ReaderPage() {
   const { data: session } = useSession()
@@ -374,6 +375,7 @@ export default function ReaderPage() {
             {getTranslation("backToLibrary", language)}
           </Button>
           <div className="flex items-center gap-3">
+            <ThemeSwitcher />
             <LanguageSwitcher />
             {!isEditing ? (
               <Button

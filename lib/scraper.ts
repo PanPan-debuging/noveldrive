@@ -1,8 +1,66 @@
 import * as cheerio from "cheerio"
+import { Converter } from "opencc-js"
 
 export interface ScrapedNovel {
   title: string
   content: string
+}
+
+// Initialize OpenCC converter for Simplified to Traditional Chinese
+const converter = Converter({ from: "cn", to: "tw" })
+
+/**
+ * Detects if text is primarily Simplified Chinese
+ * Returns true if the text contains more Simplified Chinese characters than Traditional
+ */
+function isSimplifiedChinese(text: string): boolean {
+  // Common Simplified Chinese characters that differ from Traditional
+  const simplifiedChars = /[简体中文常见字符：这那个为会时说可以]/g
+  // Common Traditional Chinese characters
+  const traditionalChars = /[繁體中文常見字符：這那個為會時說可以]/g
+  
+  const simplifiedCount = (text.match(simplifiedChars) || []).length
+  const traditionalCount = (text.match(traditionalChars) || []).length
+  
+  // If we have more simplified than traditional, likely simplified
+  if (simplifiedCount > traditionalCount) {
+    return true
+  }
+  
+  // Check for specific simplified-only characters
+  const simplifiedOnly = /[简体]/g
+  if (simplifiedOnly.test(text)) {
+    return true
+  }
+  
+  // Check for specific traditional-only characters
+  const traditionalOnly = /[繁體]/g
+  if (traditionalOnly.test(text)) {
+    return false
+  }
+  
+  // If no clear indicator, check common simplified patterns
+  // Simplified: 这、那、为、会、说、时、个
+  // Traditional: 這、那、為、會、說、時、個
+  const simplifiedPattern = /[这为会说时个]/g
+  const traditionalPattern = /[這為會說時個]/g
+  
+  const simplifiedMatches = (text.match(simplifiedPattern) || []).length
+  const traditionalMatches = (text.match(traditionalPattern) || []).length
+  
+  return simplifiedMatches > traditionalMatches
+}
+
+/**
+ * Converts Simplified Chinese to Traditional Chinese
+ */
+function convertToTraditional(text: string): string {
+  try {
+    return converter(text)
+  } catch (error) {
+    console.error("[SCRAPER] Error converting to Traditional Chinese:", error)
+    return text // Return original if conversion fails
+  }
 }
 
 export async function scrapeNovel(url: string): Promise<ScrapedNovel> {
@@ -180,6 +238,17 @@ export async function scrapeNovel(url: string): Promise<ScrapedNovel> {
       throw new Error(
         "Could not extract meaningful content from the URL. The page structure may not be supported, or the content may be loaded dynamically via JavaScript."
       )
+    }
+
+    // Check if content is Simplified Chinese and convert to Traditional
+    const isSimplified = isSimplifiedChinese(content)
+    if (isSimplified) {
+      console.log("[SCRAPER] Detected Simplified Chinese, converting to Traditional...")
+      content = convertToTraditional(content)
+      title = convertToTraditional(title)
+      console.log("[SCRAPER] Conversion to Traditional Chinese completed")
+    } else {
+      console.log("[SCRAPER] Content is not Simplified Chinese, skipping conversion")
     }
 
     console.log("[SCRAPER] Scraping successful!")

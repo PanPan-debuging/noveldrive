@@ -7,6 +7,7 @@ import { BookOpen, LogOut } from "lucide-react"
 import { NovelLibrary } from "@/components/novel-library"
 import { NovelScraper } from "@/components/novel-scraper"
 import { LanguageSwitcher } from "@/components/language-switcher"
+import { ThemeSwitcher } from "@/components/theme-switcher"
 import { useLanguage } from "@/contexts/language-context"
 import { getTranslation } from "@/lib/i18n"
 
@@ -33,8 +34,9 @@ export default function Home() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-50 via-white to-pink-50 p-4">
         <div className="w-full max-w-md relative border border-black rounded-xl bg-white p-6 md:p-8">
-          {/* Language Switcher - Top Left */}
-          <div className="absolute top-4 left-4 md:top-6 md:left-6">
+          {/* Language Switcher & Theme Switcher - Top Left */}
+          <div className="absolute top-4 left-4 md:top-6 md:left-6 flex items-center gap-2">
+            <ThemeSwitcher />
             <LanguageSwitcher />
           </div>
           
@@ -80,6 +82,7 @@ export default function Home() {
             <h1 className="text-2xl font-medium text-foreground">{getTranslation("novelDrive", language)}</h1>
           </div>
           <div className="flex items-center gap-3">
+            <ThemeSwitcher />
             <LanguageSwitcher />
             <span className="text-sm text-muted-foreground hidden sm:inline">
               {session.user?.email}
