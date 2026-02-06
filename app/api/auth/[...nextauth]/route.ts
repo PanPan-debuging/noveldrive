@@ -1,7 +1,9 @@
 import NextAuth, { type NextAuthOptions } from "next-auth"
 import GoogleProvider from "next-auth/providers/google"
 
-export const authOptions: NextAuthOptions = {
+// Note: In App Router route handlers, only specific exports like GET/POST are allowed.
+// We keep authOptions as a local constant instead of exporting it to satisfy Next.js route rules.
+const authOptions: NextAuthOptions = {
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
