@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
-import { authOptions } from "../auth/[...nextauth]/route"
+import { authOptions } from "@/lib/auth-options"
 import { scrapeNovel } from "@/lib/scraper"
 import { uploadNovelToDrive } from "@/lib/google-drive"
 
