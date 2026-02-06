@@ -48,6 +48,13 @@ export const translations = {
     loading: "載入中...",
     save: "儲存",
     longPressToTop: "長按 3 秒回到頂部",
+    edit: "編輯",
+    cancel: "取消",
+    saveChanges: "儲存變更",
+    editing: "編輯中...",
+    editNovel: "編輯小說",
+    saveSuccess: "小說已成功更新",
+    saveError: "儲存失敗",
     
     // Metadata Editor
     editMetadata: "編輯資訊",
@@ -112,6 +119,13 @@ export const translations = {
     loading: "Loading...",
     save: "Save",
     longPressToTop: "Long press 3s to scroll to top",
+    edit: "Edit",
+    cancel: "Cancel",
+    saveChanges: "Save Changes",
+    editing: "Editing...",
+    editNovel: "Edit Novel",
+    saveSuccess: "Novel updated successfully",
+    saveError: "Failed to save",
     
     // Metadata Editor
     editMetadata: "Edit Metadata",

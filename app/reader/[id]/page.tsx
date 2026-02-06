@@ -6,8 +6,9 @@ import { useState, useEffect, useRef, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
-import { ArrowLeft, Star, Save, Loader2, ArrowUp } from "lucide-react"
+import { ArrowLeft, Star, Save, Loader2, ArrowUp, Edit2, X } from "lucide-react"
 import { NovelMetadataEditor } from "@/components/novel-metadata-editor"
 import { useLanguage } from "@/contexts/language-context"
 import { getTranslation } from "@/lib/i18n"
@@ -18,8 +19,11 @@ export default function ReaderPage() {
   const params = useParams()
   const router = useRouter()
   const [content, setContent] = useState<string>("")
+  const [editedContent, setEditedContent] = useState<string>("")
   const [title, setTitle] = useState<string>("")
   const [isLoading, setIsLoading] = useState(true)
+  const [isEditing, setIsEditing] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const [rating, setRating] = useState(0)
   const [categories, setCategories] = useState<string[]>(["Uncategorized"])
   const { toast } = useToast()
@@ -174,7 +178,9 @@ export default function ReaderPage() {
         throw new Error("Failed to fetch novel content")
       }
       const contentData = await contentResponse.json()
-      setContent(contentData.content || "")
+      const novelContent = contentData.content || ""
+      setContent(novelContent)
+      setEditedContent(novelContent)
 
       // 处理元数据响应
       if (novelsResponse.ok) {
@@ -300,6 +306,53 @@ export default function ReaderPage() {
     }
   }
 
+  const handleEdit = () => {
+    setEditedContent(content)
+    setIsEditing(true)
+  }
+
+  const handleCancelEdit = () => {
+    setEditedContent(content)
+    setIsEditing(false)
+  }
+
+  const handleSaveContent = async () => {
+    setIsSaving(true)
+    try {
+      const response = await fetch(`/api/novels/${params.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          content: editedContent,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to save content")
+      }
+
+      setContent(editedContent)
+      setIsEditing(false)
+      toast({
+        title: getTranslation("saveSuccess", language),
+        description: getTranslation("saveSuccess", language),
+      })
+    } catch (error) {
+      toast({
+        title: getTranslation("saveError", language),
+        description:
+          error instanceof Error
+            ? error.message
+            : getTranslation("saveError", language),
+        variant: "destructive",
+      })
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   if (!session) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -322,6 +375,40 @@ export default function ReaderPage() {
           </Button>
           <div className="flex items-center gap-3">
             <LanguageSwitcher />
+            {!isEditing ? (
+              <Button
+                variant="outline"
+                onClick={handleEdit}
+                className="flex items-center gap-2 h-9"
+              >
+                <Edit2 className="h-4 w-4" />
+                {getTranslation("edit", language)}
+              </Button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={handleCancelEdit}
+                  disabled={isSaving}
+                  className="flex items-center gap-2 h-9"
+                >
+                  <X className="h-4 w-4" />
+                  {getTranslation("cancel", language)}
+                </Button>
+                <Button
+                  onClick={handleSaveContent}
+                  disabled={isSaving}
+                  className="flex items-center gap-2 h-9"
+                >
+                  {isSaving ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
+                  {getTranslation("saveChanges", language)}
+                </Button>
+              </div>
+            )}
             <NovelMetadataEditor
               rating={rating}
               category={categories}
@@ -352,6 +439,18 @@ export default function ReaderPage() {
                   </div>
                 </div>
               </div>
+            ) : isEditing ? (
+              <div className="space-y-4">
+                <div className="text-sm text-muted-foreground">
+                  {getTranslation("editing", language)}
+                </div>
+                <Textarea
+                  value={editedContent}
+                  onChange={(e) => setEditedContent(e.target.value)}
+                  className="min-h-[600px] font-sans text-base leading-relaxed resize-y"
+                  placeholder={getTranslation("editNovel", language)}
+                />
+              </div>
             ) : (
               <div 
                 ref={contentRef}
@@ -366,8 +465,8 @@ export default function ReaderPage() {
         </Card>
       </div>
 
-      {/* Back to Top Button - Only show when content is loaded and not loading */}
-      {!isLoading && content && (
+      {/* Back to Top Button - Only show when content is loaded, not loading, and not editing */}
+      {!isLoading && content && !isEditing && (
         <div className="fixed bottom-6 right-6 z-50">
           <button
             onMouseDown={handleLongPressStart}
