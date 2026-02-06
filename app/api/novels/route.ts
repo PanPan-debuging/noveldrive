@@ -3,6 +3,11 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth-options"
 import { listNovelsFromDrive } from "@/lib/google-drive"
 
+type NovelMetadata = {
+  rating: number
+  category: string | string[]
+}
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions)
@@ -17,10 +22,10 @@ export async function GET() {
     const novels = await listNovelsFromDrive(session.accessToken)
 
     const formattedNovels = novels.map((file: any) => {
-      let metadata = { rating: 0, category: [] }
+      let metadata: NovelMetadata = { rating: 0, category: [] as string[] }
       try {
         if (file.description) {
-          metadata = JSON.parse(file.description)
+          metadata = JSON.parse(file.description) as NovelMetadata
         }
       } catch {
         // Use appProperties as fallback
