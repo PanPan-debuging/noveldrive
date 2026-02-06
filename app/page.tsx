@@ -15,10 +15,16 @@ export default function Home() {
   const { data: session, status } = useSession()
   const { language } = useLanguage()
   const [mounted, setMounted] = useState(false)
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
 
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  const handleScrapeSuccess = () => {
+    // Trigger library refresh by updating the trigger value
+    setRefreshTrigger(prev => prev + 1)
+  }
 
   if (status === "loading") {
     return (
@@ -96,9 +102,9 @@ export default function Home() {
       </nav>
 
       <main className="container mx-auto px-4 py-6 max-w-6xl">
-        <NovelScraper />
+        <NovelScraper onScrapeSuccess={handleScrapeSuccess} />
         <div className="mt-6">
-          <NovelLibrary />
+          <NovelLibrary refreshTrigger={refreshTrigger} />
         </div>
       </main>
     </div>

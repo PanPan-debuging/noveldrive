@@ -11,7 +11,11 @@ import { useLanguage } from "@/contexts/language-context"
 import { getTranslation } from "@/lib/i18n"
 import { MultiCategorySelect } from "@/components/multi-category-select"
 
-export function NovelScraper() {
+interface NovelScraperProps {
+  onScrapeSuccess?: () => void
+}
+
+export function NovelScraper({ onScrapeSuccess }: NovelScraperProps) {
   const [url, setUrl] = useState("")
   const [categories, setCategories] = useState<string[]>([])
   const [rating, setRating] = useState("0")
@@ -65,8 +69,10 @@ export function NovelScraper() {
       setCategories([])
       setRating("0")
       
-      // Refresh the page to update the library
-      window.location.reload()
+      // Refresh the library without reloading the page
+      if (onScrapeSuccess) {
+        onScrapeSuccess()
+      }
     } catch (error) {
       let errorMessage = getTranslation("scrapeError", language)
       

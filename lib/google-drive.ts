@@ -5,6 +5,50 @@ export interface NovelMetadata {
   category?: string | string[]
 }
 
+/**
+ * Compresses text content by removing unnecessary whitespace
+ * while preserving paragraph structure and readability
+ */
+function compressText(content: string): string {
+  // Split into lines
+  const lines = content.split('\n')
+  
+  // Process each line
+  const processedLines: string[] = []
+  let lastWasEmpty = false
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim()
+    const isEmpty = line.length === 0
+    
+    // Skip multiple consecutive empty lines (keep only one)
+    if (isEmpty) {
+      if (!lastWasEmpty && processedLines.length > 0) {
+        processedLines.push('')
+      }
+      lastWasEmpty = true
+    } else {
+      // Remove extra spaces between words (keep single space)
+      const compressedLine = line.replace(/\s+/g, ' ')
+      processedLines.push(compressedLine)
+      lastWasEmpty = false
+    }
+  }
+  
+  // Join with single newline (paragraph breaks are empty lines)
+  return processedLines.join('\n')
+}
+
+/**
+ * Decompresses text for display (restores formatting)
+ * This ensures readability when displaying in the web interface
+ */
+function decompressText(content: string): string {
+  // The compressed format is already readable
+  // Just ensure proper paragraph spacing
+  return content.replace(/\n\n+/g, '\n\n')
+}
+
 export async function getOrCreateLibraryFolder(accessToken: string): Promise<string> {
   try {
     const auth = new google.auth.OAuth2()
@@ -76,9 +120,16 @@ export async function uploadNovelToDrive(
       },
     }
 
+    // Compress content before uploading to reduce file size
+    const compressedContent = compressText(content)
+    const originalSize = Buffer.byteLength(content, 'utf-8')
+    const compressedSize = Buffer.byteLength(compressedContent, 'utf-8')
+    const reductionPercent = Math.round((1 - compressedSize / originalSize) * 100)
+    console.log(`[GOOGLE_DRIVE] Content compressed: ${originalSize} -> ${compressedSize} bytes (${reductionPercent}% reduction)`)
+
     const media = {
       mimeType: "text/plain",
-      body: content,
+      body: compressedContent,
     }
 
     const response = await drive.files.create({
@@ -140,7 +191,12 @@ export async function getNovelContent(accessToken: string, fileId: string): Prom
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = []
     response.data.on("data", (chunk: Buffer) => chunks.push(chunk))
-    response.data.on("end", () => resolve(Buffer.concat(chunks).toString("utf-8")))
+    response.data.on("end", () => {
+      const content = Buffer.concat(chunks).toString("utf-8")
+      // Decompress content for display (restore formatting)
+      const decompressedContent = decompressText(content)
+      resolve(decompressedContent)
+    })
     response.data.on("error", reject)
   })
 }
@@ -180,11 +236,18 @@ export async function updateNovelContent(
     auth.setCredentials({ access_token: accessToken })
     const drive = google.drive({ version: "v3", auth })
 
+    // Compress content before updating
+    const compressedContent = compressText(content)
+    const originalSize = Buffer.byteLength(content, 'utf-8')
+    const compressedSize = Buffer.byteLength(compressedContent, 'utf-8')
+    const reductionPercent = Math.round((1 - compressedSize / originalSize) * 100)
+    console.log(`[GOOGLE_DRIVE] Content compressed for update: ${originalSize} -> ${compressedSize} bytes (${reductionPercent}% reduction)`)
+
     await drive.files.update({
       fileId,
       media: {
         mimeType: "text/plain",
-        body: content,
+        body: compressedContent,
       },
     })
   } catch (error: any) {

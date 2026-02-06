@@ -19,7 +19,11 @@ interface Novel {
   modifiedTime: string
 }
 
-export function NovelLibrary() {
+interface NovelLibraryProps {
+  refreshTrigger?: number
+}
+
+export function NovelLibrary({ refreshTrigger }: NovelLibraryProps) {
   const [novels, setNovels] = useState<Novel[]>([])
   const [filteredNovels, setFilteredNovels] = useState<Novel[]>([])
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
@@ -30,7 +34,7 @@ export function NovelLibrary() {
 
   useEffect(() => {
     fetchNovels()
-  }, [])
+  }, [refreshTrigger])
 
   useEffect(() => {
     let filtered = [...novels]
