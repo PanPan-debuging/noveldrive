@@ -8,7 +8,8 @@ export const authOptions: NextAuthOptions = {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       authorization: {
         params: {
-          scope: "openid email profile https://www.googleapis.com/auth/drive.file",
+          scope:
+            "openid email profile https://www.googleapis.com/auth/drive.file",
           access_type: "offline",
           prompt: "consent",
         },
@@ -18,9 +19,9 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, account }) {
       if (account) {
-        token.accessToken = account.access_token
-        token.refreshToken = account.refresh_token
-        token.expiresAt = account.expires_at
+        token.accessToken = (account as any).access_token
+        token.refreshToken = (account as any).refresh_token
+        token.expiresAt = (account as any).expires_at
       }
 
       // Refresh token if it's about to expire (within 5 minutes)
@@ -44,9 +45,10 @@ export const authOptions: NextAuthOptions = {
             })
 
             const data = await response.json()
-            if (response.ok && data.access_token) {
-              token.accessToken = data.access_token
-              token.expiresAt = Math.floor(Date.now() / 1000) + (data.expires_in || 3600)
+            if (response.ok && (data as any).access_token) {
+              token.accessToken = (data as any).access_token
+              token.expiresAt =
+                Math.floor(Date.now() / 1000) + ((data as any).expires_in || 3600)
             }
           } catch (error) {
             console.error("Token refresh error:", error)
@@ -58,9 +60,9 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (session.user) {
-        session.accessToken = token.accessToken as string
-        session.refreshToken = token.refreshToken as string
-        session.expiresAt = token.expiresAt as number
+        ;(session as any).accessToken = token.accessToken as string
+        ;(session as any).refreshToken = token.refreshToken as string
+        ;(session as any).expiresAt = token.expiresAt as number
       }
       return session
     },
