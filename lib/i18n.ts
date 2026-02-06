@@ -59,7 +59,6 @@ export const translations = {
     // Metadata Editor
     editMetadata: "編輯資訊",
     category: "分類",
-    rating: "評分",
     
     // Categories
     fantasy: "奇幻",
@@ -130,7 +129,6 @@ export const translations = {
     // Metadata Editor
     editMetadata: "Edit Metadata",
     category: "Category",
-    rating: "Rating",
     
     // Categories
     fantasy: "Fantasy",
