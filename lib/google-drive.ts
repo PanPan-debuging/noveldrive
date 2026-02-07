@@ -268,6 +268,43 @@ export async function updateNovelContent(
   }
 }
 
+export async function updateNovelName(
+  accessToken: string,
+  fileId: string,
+  newName: string
+): Promise<void> {
+  try {
+    const auth = new google.auth.OAuth2()
+    auth.setCredentials({ access_token: accessToken })
+    const drive = google.drive({ version: "v3", auth })
+
+    // Ensure the filename has .txt extension
+    const fileName = newName.endsWith('.txt') ? newName : `${newName}.txt`
+
+    await drive.files.update({
+      fileId,
+      requestBody: {
+        name: fileName,
+      },
+    })
+  } catch (error: any) {
+    console.error("[GOOGLE_DRIVE] Error in updateNovelName:", error)
+    if (error.code === 403 || error.message?.includes("Insufficient Permission")) {
+      throw new Error(
+        "Insufficient permissions to update novel name. Please sign out and sign in again, and make sure you grant all requested permissions."
+      )
+    }
+    if (error.code === 401 || error.message?.includes("Invalid Credentials")) {
+      throw new Error(
+        "Authentication expired. Please sign out and sign in again."
+      )
+    }
+    throw new Error(
+      `Failed to update novel name: ${error.message || "Unknown error"}`
+    )
+  }
+}
+
 export async function deleteNovelFromDrive(
   accessToken: string,
   fileId: string

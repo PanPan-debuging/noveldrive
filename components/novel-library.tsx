@@ -1,9 +1,18 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import { BookOpen, Star, Filter, ArrowUpDown, Trash2 } from "lucide-react"
 import Link from "next/link"
@@ -29,6 +38,10 @@ export function NovelLibrary({ refreshTrigger }: NovelLibraryProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
   const [sortBy, setSortBy] = useState<"rating" | "date">("date")
   const [isLoading, setIsLoading] = useState(true)
+  const [editingNovel, setEditingNovel] = useState<{ id: string; name: string } | null>(null)
+  const [editName, setEditName] = useState("")
+  const [isSaving, setIsSaving] = useState(false)
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null)
   const { toast } = useToast()
   const { language } = useLanguage()
 
@@ -112,6 +125,68 @@ export function NovelLibrary({ refreshTrigger }: NovelLibraryProps) {
           error instanceof Error ? error.message : getTranslation("deleteError", language),
         variant: "destructive",
       })
+    }
+  }
+
+  const handleLongPressStart = (novel: Novel, e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    longPressTimer.current = setTimeout(() => {
+      // Remove .txt extension if present for editing
+      const nameWithoutExt = novel.name.replace(/\.txt$/i, "")
+      setEditName(nameWithoutExt)
+      setEditingNovel({ id: novel.id, name: novel.name })
+    }, 500) // 500ms long press
+  }
+
+  const handleLongPressEnd = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
+    }
+  }
+
+  const handleSaveName = async () => {
+    if (!editingNovel || !editName.trim()) {
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      const response = await fetch(`/api/novels/${editingNovel.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name: editName.trim() }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to update novel name")
+      }
+
+      toast({
+        title: getTranslation("saveSuccess", language),
+        description: getTranslation("saveSuccess", language),
+      })
+
+      setEditingNovel(null)
+      setEditName("")
+      // 刷新小说列表
+      fetchNovels()
+    } catch (error) {
+      toast({
+        title: getTranslation("saveError", language),
+        description:
+          error instanceof Error ? error.message : getTranslation("saveError", language),
+        variant: "destructive",
+      })
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -210,8 +285,16 @@ export function NovelLibrary({ refreshTrigger }: NovelLibraryProps) {
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                     <CardHeader className="pb-3">
-                      <CardTitle className="text-lg line-clamp-2 pr-8 font-medium">
-                        {novel.name}
+                      <CardTitle 
+                        className="text-lg line-clamp-2 pr-8 font-medium select-none"
+                        onMouseDown={(e) => handleLongPressStart(novel, e)}
+                        onMouseUp={handleLongPressEnd}
+                        onMouseLeave={handleLongPressEnd}
+                        onTouchStart={(e) => handleLongPressStart(novel, e)}
+                        onTouchEnd={handleLongPressEnd}
+                        onTouchCancel={handleLongPressEnd}
+                      >
+                        {novel.name.replace(/\.txt$/i, "")}
                       </CardTitle>
                       <CardDescription className="text-sm mt-1">
                         {(() => {
@@ -245,6 +328,59 @@ export function NovelLibrary({ refreshTrigger }: NovelLibraryProps) {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={editingNovel !== null} onOpenChange={(open) => {
+        if (!open) {
+          setEditingNovel(null)
+          setEditName("")
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{getTranslation("editNovel", language)}</DialogTitle>
+            <DialogDescription>
+              {getTranslation("editMetadata", language)}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                {language === "zh-TW" ? "書名" : "Novel Name"}
+              </label>
+              <Input
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder={language === "zh-TW" ? "輸入書名" : "Enter novel name"}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault()
+                    handleSaveName()
+                  }
+                }}
+                autoFocus
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setEditingNovel(null)
+                setEditName("")
+              }}
+              disabled={isSaving}
+            >
+              {getTranslation("cancel", language)}
+            </Button>
+            <Button
+              onClick={handleSaveName}
+              disabled={isSaving || !editName.trim()}
+            >
+              {isSaving ? getTranslation("editing", language) : getTranslation("saveChanges", language)}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
