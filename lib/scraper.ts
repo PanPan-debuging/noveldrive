@@ -66,7 +66,7 @@ function convertToTraditional(text: string): string {
 /**
  * Helper function to extract text while preserving paragraph structure
  */
-function extractTextWithParagraphs($: cheerio.CheerioAPI, element: cheerio.Cheerio): string {
+function extractTextWithParagraphs($: ReturnType<typeof cheerio.load>, element: cheerio.Cheerio): string {
   // Clone to avoid modifying the original
   const cloned = element.clone()
   
@@ -197,7 +197,7 @@ async function fetchHtml(url: string): Promise<string> {
 /**
  * Extracts content and title from a single page
  */
-function extractPageContent($: cheerio.CheerioAPI): { title: string; content: string } {
+function extractPageContent($: ReturnType<typeof cheerio.load>): { title: string; content: string } {
   // Remove script and style elements
   $("script, style, nav, header, footer, aside, .ad, .advertisement, .ads").remove()
 
@@ -250,7 +250,7 @@ function extractPageContent($: cheerio.CheerioAPI): { title: string; content: st
  * Finds the "next page" link from the HTML
  * Returns the absolute URL of the next page, or null if not found
  */
-function findNextPageLink($: cheerio.CheerioAPI, currentUrl: string): string | null {
+function findNextPageLink($: ReturnType<typeof cheerio.load>, currentUrl: string): string | null {
   // Common selectors for "next page" links
   // Try various patterns that Chinese novel sites commonly use
   const nextPageSelectors = [
