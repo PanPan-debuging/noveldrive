@@ -133,14 +133,14 @@ export function NovelScraper({ onScrapeSuccess }: NovelScraperProps) {
             value={pageCount}
             onChange={(e) => {
               const value = e.target.value
-              if (value === "" || (parseInt(value) > 0 && parseInt(value) <= 100)) {
+              if (value === "" || (parseInt(value) > 0 && parseInt(value) <= 500)) {
                 setPageCount(value)
               }
             }}
             disabled={isLoading}
             className="h-9"
             min="1"
-            max="100"
+            max="500"
           />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

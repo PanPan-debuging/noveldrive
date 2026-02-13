@@ -6,7 +6,7 @@ import { uploadNovelToDrive } from "@/lib/google-drive"
 
 // Ensure this runs on Node.js runtime (not Edge)
 export const runtime = "nodejs"
-export const maxDuration = 60 // 60 seconds max duration
+export const maxDuration = 300 // 300 seconds (5 minutes) max duration for large page scraping
 
 export async function POST(request: NextRequest) {
   try {
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
     console.log("[SCRAPE] Starting to scrape novel from URL...")
     // Parse pageCount if provided
     const maxPages = pageCount && typeof pageCount === "number" && pageCount > 0 
-      ? Math.min(pageCount, 100) // Cap at 100 pages for safety
+      ? Math.min(pageCount, 500) // Cap at 500 pages for safety
       : undefined
     if (maxPages) {
       console.log(`[SCRAPE] Will scrape up to ${maxPages} pages`)
