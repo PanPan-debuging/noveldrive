@@ -357,35 +357,41 @@ function constructNextPageUrl(currentUrl: string, currentPage: number, nextPage:
   try {
     const url = new URL(currentUrl)
     
-    // Pattern 1: ?page=1 -> ?page=2
+    // Pattern 1: ?chapterNumber=0 -> ?chapterNumber=1
+    if (url.searchParams.has("chapterNumber")) {
+      url.searchParams.set("chapterNumber", nextPage.toString())
+      return url.href
+    }
+    
+    // Pattern 2: ?page=1 -> ?page=2
     if (url.searchParams.has("page")) {
       url.searchParams.set("page", nextPage.toString())
       return url.href
     }
     
-    // Pattern 2: /page/1 -> /page/2
+    // Pattern 3: /page/1 -> /page/2
     const pathMatch = url.pathname.match(/\/page[\/_-](\d+)/i)
     if (pathMatch) {
       url.pathname = url.pathname.replace(/\/page[\/_-]\d+/i, `/page/${nextPage}`)
       return url.href
     }
     
-    // Pattern 3: /1.html -> /2.html
+    // Pattern 4: /1.html -> /2.html
     const htmlMatch = url.pathname.match(/(\d+)\.html?$/i)
     if (htmlMatch) {
       url.pathname = url.pathname.replace(/\d+\.html?$/i, `${nextPage}.html`)
       return url.href
     }
     
-    // Pattern 4: _1.html -> _2.html
+    // Pattern 5: _1.html -> _2.html
     const underscoreMatch = url.pathname.match(/_(\d+)\.html?$/i)
     if (underscoreMatch) {
       url.pathname = url.pathname.replace(/_\d+\.html?$/i, `_${nextPage}.html`)
       return url.href
     }
     
-    // Pattern 5: Add ?page=2 if no page parameter exists
-    if (currentPage === 1 && !url.searchParams.has("page")) {
+    // Pattern 6: Add ?page=2 if no page parameter exists
+    if (currentPage === 1 && !url.searchParams.has("page") && !url.searchParams.has("chapterNumber")) {
       url.searchParams.set("page", nextPage.toString())
       return url.href
     }
@@ -397,10 +403,11 @@ function constructNextPageUrl(currentUrl: string, currentPage: number, nextPage:
 }
 
 /**
- * Extracts page number from URL (e.g., page=2, page/2, _2.html)
+ * Extracts page number from URL (e.g., page=2, page/2, _2.html, chapterNumber=0)
  */
 function extractPageNumber(url: string): number | null {
   const patterns = [
+    /[?&]chapterNumber[=_](\d+)/i,
     /[?&]page[=_](\d+)/i,
     /\/page[\/_-](\d+)/i,
     /[_-](\d+)\.html?$/i,
