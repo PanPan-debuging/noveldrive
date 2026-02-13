@@ -70,18 +70,15 @@ function extractTextWithParagraphs($: ReturnType<typeof cheerio.load>, element: 
   // Clone to avoid modifying the original
   const cloned = element.clone()
   
-  // Insert newlines before block elements to preserve paragraph structure
-  cloned.find("p, div, h1, h2, h3, h4, h5, h6").each((_, el) => {
-    $(el).before("\n\n")
-  })
+  // Replace <br> tags with newlines first
+  cloned.find("br").replaceWith("\n")
   
-  // Replace <br> tags with newlines
-  cloned.find("br").each((_, el) => {
-    $(el).replaceWith("\n")
-  })
-  
-  // Get the text content
+  // Get the text content - cheerio will naturally preserve some structure
   let text = cloned.text()
+  
+  // Add extra newlines between block elements by processing the text
+  // This is simpler and more reliable than manipulating DOM
+  text = text.replace(/\n{3,}/g, "\n\n") // Normalize multiple newlines
   
   return text
 }
