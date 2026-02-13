@@ -34,6 +34,19 @@ export function NovelScraper({ onScrapeSuccess }: NovelScraperProps) {
       return
     }
 
+    // Validate pageCount if provided
+    if (pageCount) {
+      const numPages = parseInt(pageCount, 10)
+      if (isNaN(numPages) || numPages < 1 || numPages > 500) {
+        toast({
+          title: getTranslation("scrapeError", language),
+          description: "頁數必須在 1 到 500 之間 / Page count must be between 1 and 500",
+          variant: "destructive",
+        })
+        return
+      }
+    }
+
     setIsLoading(true)
     try {
       const response = await fetch("/api/scrape", {
@@ -45,7 +58,7 @@ export function NovelScraper({ onScrapeSuccess }: NovelScraperProps) {
           url: url.trim(),
           category: categories,
           rating: parseInt(rating),
-          pageCount: pageCount ? parseInt(pageCount) : undefined,
+          pageCount: pageCount ? parseInt(pageCount, 10) : undefined,
         }),
       })
 
@@ -133,9 +146,7 @@ export function NovelScraper({ onScrapeSuccess }: NovelScraperProps) {
             value={pageCount}
             onChange={(e) => {
               const value = e.target.value
-              if (value === "" || (parseInt(value) > 0 && parseInt(value) <= 500)) {
-                setPageCount(value)
-              }
+              setPageCount(value)
             }}
             disabled={isLoading}
             className="h-9"
