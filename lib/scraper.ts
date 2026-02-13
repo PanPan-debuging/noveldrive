@@ -427,19 +427,51 @@ function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-export async function scrapeNovel(url: string): Promise<ScrapedNovel> {
+export async function scrapeNovel(url: string, maxPages?: number): Promise<ScrapedNovel> {
   try {
     console.log("[SCRAPER] Starting to scrape novel from URL:", url)
     
+    // If maxPages is not provided or is 0, only scrape the first page
+    if (!maxPages || maxPages <= 0) {
+      console.log("[SCRAPER] Single page mode - scraping only the first page")
+      const html = await fetchHtml(url)
+      const $ = cheerio.load(html)
+      const pageData = extractPageContent($)
+      
+      if (!pageData.content || pageData.content.length < 50) {
+        throw new Error(
+          "Could not extract meaningful content from the URL. The page structure may not be supported, or the content may be loaded dynamically via JavaScript."
+        )
+      }
+      
+      // Check if content is Simplified Chinese and convert to Traditional
+      const isSimplified = isSimplifiedChinese(pageData.content)
+      let finalContent = pageData.content
+      let finalTitle = pageData.title
+      
+      if (isSimplified) {
+        console.log("[SCRAPER] Detected Simplified Chinese, converting to Traditional...")
+        finalContent = convertToTraditional(pageData.content)
+        finalTitle = convertToTraditional(pageData.title)
+        console.log("[SCRAPER] Conversion to Traditional Chinese completed")
+      }
+      
+      return {
+        title: finalTitle.replace(/\.txt$|\.md$/i, ""),
+        content: finalContent,
+      }
+    }
+    
+    // Multi-page mode
+    console.log(`[SCRAPER] Multi-page mode - will scrape up to ${maxPages} pages`)
     let currentUrl: string | null = url
     let fullContent = ""
     let title = ""
     let visitedUrls = new Set<string>() // Prevent infinite loops
-    const maxPages = 50 // Maximum number of pages to scrape (safety limit)
     let pageCount = 0
     const baseUrl = url
 
-    // Loop through pages until no more "next page" links are found
+    // Loop through pages until maxPages is reached or no more "next page" links are found
     while (currentUrl && !visitedUrls.has(currentUrl) && pageCount < maxPages) {
       pageCount++
       visitedUrls.add(currentUrl)

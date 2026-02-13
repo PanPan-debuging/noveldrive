@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
 
     console.log("[SCRAPE] Session found, parsing body...")
     const body = await request.json()
-    const { url, category, rating } = body
+    const { url, category, rating, pageCount } = body
     
     // Normalize category to array format
     let normalizedCategory: string[] = []
@@ -58,8 +58,15 @@ export async function POST(request: NextRequest) {
     }
 
     console.log("[SCRAPE] Starting to scrape novel from URL...")
+    // Parse pageCount if provided
+    const maxPages = pageCount && typeof pageCount === "number" && pageCount > 0 
+      ? Math.min(pageCount, 100) // Cap at 100 pages for safety
+      : undefined
+    if (maxPages) {
+      console.log(`[SCRAPE] Will scrape up to ${maxPages} pages`)
+    }
     // Scrape the novel
-    const scraped = await scrapeNovel(url)
+    const scraped = await scrapeNovel(url, maxPages)
     console.log("[SCRAPE] Novel scraped successfully. Title:", scraped.title, "Content length:", scraped.content.length)
 
     console.log("[SCRAPE] Uploading to Google Drive...")

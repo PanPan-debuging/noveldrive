@@ -19,6 +19,7 @@ export function NovelScraper({ onScrapeSuccess }: NovelScraperProps) {
   const [url, setUrl] = useState("")
   const [categories, setCategories] = useState<string[]>([])
   const [rating, setRating] = useState("0")
+  const [pageCount, setPageCount] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
   const { language } = useLanguage()
@@ -44,6 +45,7 @@ export function NovelScraper({ onScrapeSuccess }: NovelScraperProps) {
           url: url.trim(),
           category: categories,
           rating: parseInt(rating),
+          pageCount: pageCount ? parseInt(pageCount) : undefined,
         }),
       })
 
@@ -68,6 +70,7 @@ export function NovelScraper({ onScrapeSuccess }: NovelScraperProps) {
       setUrl("")
       setCategories([])
       setRating("0")
+      setPageCount("")
       
       // Refresh the library without reloading the page
       if (onScrapeSuccess) {
@@ -122,7 +125,7 @@ export function NovelScraper({ onScrapeSuccess }: NovelScraperProps) {
             }}
           />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-muted-foreground">{getTranslation("selectCategory", language)}</label>
             <MultiCategorySelect
@@ -146,6 +149,24 @@ export function NovelScraper({ onScrapeSuccess }: NovelScraperProps) {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-muted-foreground">頁數 / Pages (可選)</label>
+            <Input
+              type="number"
+              placeholder="留空 = 只爬第1頁"
+              value={pageCount}
+              onChange={(e) => {
+                const value = e.target.value
+                if (value === "" || (parseInt(value) > 0 && parseInt(value) <= 100)) {
+                  setPageCount(value)
+                }
+              }}
+              disabled={isLoading}
+              className="h-9"
+              min="1"
+              max="100"
+            />
           </div>
         </div>
         <Button
