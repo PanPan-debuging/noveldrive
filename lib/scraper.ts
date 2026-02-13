@@ -426,17 +426,28 @@ function isSameChapter(url1: string, url2: string): boolean {
     const u1 = new URL(url1)
     const u2 = new URL(url2)
 
-    // Same domain
+    // Same domain - required
     if (u1.hostname !== u2.hostname) {
       return false
     }
 
-    // Extract chapter identifiers from paths
-    // Common patterns: /chapter/1, /ch/1, /chapter1, etc.
+    // If only difference is page parameter, definitely same chapter
     const path1 = u1.pathname
     const path2 = u2.pathname
+    if (path1 === path2) {
+      // Same path, check if only page parameter differs
+      const page1 = u1.searchParams.get("page")
+      const page2 = u2.searchParams.get("page")
+      if (page1 !== page2 && (page1 || page2)) {
+        // Only page parameter differs, same chapter
+        return true
+      }
+      // Same URL (shouldn't happen but be safe)
+      return true
+    }
 
-    // Try to extract chapter number/ID
+    // Extract chapter identifiers from paths
+    // Common patterns: /chapter/1, /ch/1, /chapter1, etc.
     const chapterPattern1 = path1.match(/(?:chapter|ch)[\/_-]?(\d+)/i)
     const chapterPattern2 = path2.match(/(?:chapter|ch)[\/_-]?(\d+)/i)
 
@@ -445,8 +456,14 @@ function isSameChapter(url1: string, url2: string): boolean {
       return chapterPattern1[1] === chapterPattern2[1]
     }
 
-    // If one has chapter number and other doesn't, likely different chapters
+    // If one has chapter number and other doesn't, check if paths are similar
     if ((chapterPattern1 && !chapterPattern2) || (!chapterPattern1 && chapterPattern2)) {
+      // Be more lenient - if paths are very similar, allow it
+      const basePath1 = path1.replace(/[_-]?\d+\.html?$/i, "").replace(/[?&]page=\d+/i, "")
+      const basePath2 = path2.replace(/[_-]?\d+\.html?$/i, "").replace(/[?&]page=\d+/i, "")
+      if (basePath1 === basePath2) {
+        return true // Same base path, likely same chapter
+      }
       return false
     }
 
@@ -455,33 +472,41 @@ function isSameChapter(url1: string, url2: string): boolean {
     const basePath1 = path1.replace(/[_-]?\d+\.html?$/i, "").replace(/[?&]page=\d+/i, "")
     const basePath2 = path2.replace(/[_-]?\d+\.html?$/i, "").replace(/[?&]page=\d+/i, "")
 
-    // If base paths are very different, likely different chapters
-    if (basePath1 !== basePath2) {
-      // Allow some difference (e.g., page numbers in path)
-      const path1Parts = basePath1.split("/").filter(Boolean)
-      const path2Parts = basePath2.split("/").filter(Boolean)
-      
-      // If path lengths differ significantly, likely different chapters
-      if (Math.abs(path1Parts.length - path2Parts.length) > 1) {
-        return false
-      }
+    // If base paths match exactly, same chapter
+    if (basePath1 === basePath2) {
+      return true
+    }
 
-      // Check if most parts match
-      const matchingParts = path1Parts.filter((part, i) => 
-        path2Parts[i] && (part === path2Parts[i] || part.match(/\d+/) && path2Parts[i].match(/\d+/))
-      )
-      
-      // If less than 50% match, likely different chapters
-      if (matchingParts.length < Math.min(path1Parts.length, path2Parts.length) * 0.5) {
-        return false
-      }
+    // If base paths are very different, likely different chapters
+    const path1Parts = basePath1.split("/").filter(Boolean)
+    const path2Parts = basePath2.split("/").filter(Boolean)
+    
+    // If path lengths differ significantly, likely different chapters
+    if (Math.abs(path1Parts.length - path2Parts.length) > 1) {
+      return false
+    }
+
+    // Check if most parts match
+    const matchingParts = path1Parts.filter((part, i) => 
+      path2Parts[i] && (part === path2Parts[i] || part.match(/\d+/) && path2Parts[i].match(/\d+/))
+    )
+    
+    // If less than 50% match, likely different chapters
+    if (matchingParts.length < Math.min(path1Parts.length, path2Parts.length) * 0.5) {
+      return false
     }
 
     // Default: assume same chapter if URLs are similar
     return true
-  } catch {
-    // If URL parsing fails, be conservative and return false
-    return false
+  } catch (error) {
+    // If URL parsing fails, log but be more lenient
+    console.log("[SCRAPER] URL parsing failed in isSameChapter:", error)
+    // If both URLs are from same domain (simple check), allow it
+    try {
+      return new URL(url1).hostname === new URL(url2).hostname
+    } catch {
+      return false
+    }
   }
 }
 
@@ -571,6 +596,7 @@ export async function scrapeNovel(url: string, maxPages?: number): Promise<Scrap
 
         // Find next page link
         let nextPageUrl = findNextPageLink($, currentUrl)
+        let isConstructedUrl = false
         
         // If no link found, try to construct next page URL
         if (!nextPageUrl && pageCount < maxPages) {
@@ -579,18 +605,25 @@ export async function scrapeNovel(url: string, maxPages?: number): Promise<Scrap
             const nextPageNum = currentPageNum + 1
             nextPageUrl = constructNextPageUrl(currentUrl, currentPageNum, nextPageNum)
             if (nextPageUrl) {
+              isConstructedUrl = true
               console.log("[SCRAPER] Constructed next page URL as fallback:", nextPageUrl)
             }
           } else if (pageCount === 1) {
             // If first page and no page number, try to construct page 2
             nextPageUrl = constructNextPageUrl(currentUrl, 1, 2)
             if (nextPageUrl) {
+              isConstructedUrl = true
               console.log("[SCRAPER] Constructed page 2 URL as fallback:", nextPageUrl)
             }
           }
         }
         
-        if (nextPageUrl && isSameChapter(baseUrl, nextPageUrl)) {
+        // For constructed URLs, be more lenient with chapter checking
+        const shouldContinue = nextPageUrl && (
+          isConstructedUrl || isSameChapter(baseUrl, nextPageUrl)
+        )
+        
+        if (shouldContinue) {
           // Check if we've already visited this URL
           if (visitedUrls.has(nextPageUrl)) {
             console.log("[SCRAPER] Next page URL already visited, stopping")
@@ -601,9 +634,9 @@ export async function scrapeNovel(url: string, maxPages?: number): Promise<Scrap
             await delay(1000) // 1 second delay
           }
         } else {
-          if (nextPageUrl) {
+          if (nextPageUrl && !isConstructedUrl) {
             console.log("[SCRAPER] Next page link found but appears to be a different chapter, stopping")
-          } else {
+          } else if (!nextPageUrl) {
             console.log("[SCRAPER] No next page link found and cannot construct next URL, stopping")
           }
           currentUrl = null
