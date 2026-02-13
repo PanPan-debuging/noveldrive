@@ -326,9 +326,77 @@ function findNextPageLink($: ReturnType<typeof cheerio.load>, currentUrl: string
     if (foundLink) {
       return foundLink
     }
+    
+    // If no link found but we have a page number, try to construct next page URL
+    try {
+      const nextUrl = constructNextPageUrl(currentUrl, currentPageNum, nextPageNum)
+      if (nextUrl) {
+        console.log("[SCRAPER] Constructed next page URL:", nextUrl)
+        return nextUrl
+      }
+    } catch (error) {
+      console.log("[SCRAPER] Failed to construct next page URL:", error)
+    }
+  } else {
+    // If no page number in current URL, try to construct page 2 URL
+    try {
+      const nextUrl = constructNextPageUrl(currentUrl, 1, 2)
+      if (nextUrl) {
+        console.log("[SCRAPER] Constructed page 2 URL:", nextUrl)
+        return nextUrl
+      }
+    } catch (error) {
+      console.log("[SCRAPER] Failed to construct page 2 URL:", error)
+    }
   }
 
   return null
+}
+
+/**
+ * Constructs next page URL based on common URL patterns
+ */
+function constructNextPageUrl(currentUrl: string, currentPage: number, nextPage: number): string | null {
+  try {
+    const url = new URL(currentUrl)
+    
+    // Pattern 1: ?page=1 -> ?page=2
+    if (url.searchParams.has("page")) {
+      url.searchParams.set("page", nextPage.toString())
+      return url.href
+    }
+    
+    // Pattern 2: /page/1 -> /page/2
+    const pathMatch = url.pathname.match(/\/page[\/_-](\d+)/i)
+    if (pathMatch) {
+      url.pathname = url.pathname.replace(/\/page[\/_-]\d+/i, `/page/${nextPage}`)
+      return url.href
+    }
+    
+    // Pattern 3: /1.html -> /2.html
+    const htmlMatch = url.pathname.match(/(\d+)\.html?$/i)
+    if (htmlMatch) {
+      url.pathname = url.pathname.replace(/\d+\.html?$/i, `${nextPage}.html`)
+      return url.href
+    }
+    
+    // Pattern 4: _1.html -> _2.html
+    const underscoreMatch = url.pathname.match(/_(\d+)\.html?$/i)
+    if (underscoreMatch) {
+      url.pathname = url.pathname.replace(/_\d+\.html?$/i, `_${nextPage}.html`)
+      return url.href
+    }
+    
+    // Pattern 5: Add ?page=2 if no page parameter exists
+    if (currentPage === 1 && !url.searchParams.has("page")) {
+      url.searchParams.set("page", nextPage.toString())
+      return url.href
+    }
+    
+    return null
+  } catch {
+    return null
+  }
 }
 
 /**
@@ -505,7 +573,25 @@ export async function scrapeNovel(url: string, maxPages?: number): Promise<Scrap
         }
 
         // Find next page link
-        const nextPageUrl = findNextPageLink($, currentUrl)
+        let nextPageUrl = findNextPageLink($, currentUrl)
+        
+        // If no link found, try to construct next page URL
+        if (!nextPageUrl && pageCount < maxPages) {
+          const currentPageNum = extractPageNumber(currentUrl)
+          if (currentPageNum !== null) {
+            const nextPageNum = currentPageNum + 1
+            nextPageUrl = constructNextPageUrl(currentUrl, currentPageNum, nextPageNum)
+            if (nextPageUrl) {
+              console.log("[SCRAPER] Constructed next page URL as fallback:", nextPageUrl)
+            }
+          } else if (pageCount === 1) {
+            // If first page and no page number, try to construct page 2
+            nextPageUrl = constructNextPageUrl(currentUrl, 1, 2)
+            if (nextPageUrl) {
+              console.log("[SCRAPER] Constructed page 2 URL as fallback:", nextPageUrl)
+            }
+          }
+        }
         
         if (nextPageUrl && isSameChapter(baseUrl, nextPageUrl)) {
           // Check if we've already visited this URL
@@ -521,7 +607,7 @@ export async function scrapeNovel(url: string, maxPages?: number): Promise<Scrap
           if (nextPageUrl) {
             console.log("[SCRAPER] Next page link found but appears to be a different chapter, stopping")
           } else {
-            console.log("[SCRAPER] No next page link found, stopping")
+            console.log("[SCRAPER] No next page link found and cannot construct next URL, stopping")
           }
           currentUrl = null
         }
