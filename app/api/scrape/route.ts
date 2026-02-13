@@ -9,6 +9,7 @@ export const runtime = "nodejs"
 export const maxDuration = 300 // 300 seconds (5 minutes) max duration for large page scraping
 
 export async function POST(request: NextRequest) {
+  let requestedPageCount = 0 // Store pageCount for error messages
   try {
     console.log("[SCRAPE] Starting scrape request...")
     const session = await getServerSession(authOptions)
@@ -24,6 +25,7 @@ export async function POST(request: NextRequest) {
     console.log("[SCRAPE] Session found, parsing body...")
     const body = await request.json()
     const { url, category, rating, pageCount } = body
+    requestedPageCount = pageCount && typeof pageCount === "number" ? pageCount : 0
     
     // Normalize category to array format
     let normalizedCategory: string[] = []
@@ -111,10 +113,16 @@ export async function POST(request: NextRequest) {
       errorMessage = error.message
       
       // Handle specific error types
-      if (error.message.includes("timeout") || error.message.includes("timed out")) {
-        errorMessage = "The request timed out. Please try again or check if the URL is accessible."
+      if (error.message.includes("timeout") || error.message.includes("timed out") || error.message.includes("Function execution exceeded")) {
+        const timeoutHint = requestedPageCount > 10 
+          ? "爬取大量頁數需要更長時間。如果使用 Vercel Free Tier，API route 最多只有 10 秒 timeout。建議：1) 先試下爬取較少頁數（10-20 頁）測試功能，2) 或者升級到 Vercel Pro plan 來支援更長 timeout。"
+          : "The request timed out. Please try again or check if the URL is accessible."
+        errorMessage = `Request timed out. ${timeoutHint}`
       } else if (error.message.includes("Network error") || error.message.includes("fetch")) {
-        errorMessage = "Network error. Please check your connection and try again."
+        const networkHint = requestedPageCount > 10
+          ? "Network error. 如果爬取大量頁數，可能是 timeout 問題。建議先試下爬取較少頁數測試。"
+          : "Network error. Please check your connection and try again."
+        errorMessage = networkHint
       } else if (error.message.includes("Unauthorized") || error.message.includes("401")) {
         errorMessage = "Authentication error. Please sign in again."
       } else if (error.message.includes("403") || error.message.includes("Forbidden")) {
