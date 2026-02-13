@@ -125,7 +125,25 @@ export function NovelScraper({ onScrapeSuccess }: NovelScraperProps) {
             }}
           />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-muted-foreground">頁數 / Pages (可選，留空 = 只爬第1頁)</label>
+          <Input
+            type="number"
+            placeholder="例如：5 (會自動翻頁爬取5頁)"
+            value={pageCount}
+            onChange={(e) => {
+              const value = e.target.value
+              if (value === "" || (parseInt(value) > 0 && parseInt(value) <= 100)) {
+                setPageCount(value)
+              }
+            }}
+            disabled={isLoading}
+            className="h-9"
+            min="1"
+            max="100"
+          />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-muted-foreground">{getTranslation("selectCategory", language)}</label>
             <MultiCategorySelect
@@ -149,24 +167,6 @@ export function NovelScraper({ onScrapeSuccess }: NovelScraperProps) {
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-muted-foreground">頁數 / Pages (可選)</label>
-            <Input
-              type="number"
-              placeholder="留空 = 只爬第1頁"
-              value={pageCount}
-              onChange={(e) => {
-                const value = e.target.value
-                if (value === "" || (parseInt(value) > 0 && parseInt(value) <= 100)) {
-                  setPageCount(value)
-                }
-              }}
-              disabled={isLoading}
-              className="h-9"
-              min="1"
-              max="100"
-            />
           </div>
         </div>
         <Button
